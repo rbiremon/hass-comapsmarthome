@@ -1,0 +1,22 @@
+# Describes the format for available comapsmarthome services
+set_away:
+  name: Set away heating mode
+  description: Sets the heating system as away for housing
+
+set_home:
+  name: Return home - set normal program
+  description: Sets the heating system to normal home program
+
+set_schedule:
+  name: Set heating schedule for zone
+  descriptions: Sets the heating schedule for a given heating zone
+  target:
+    entity:
+      integration: comapsmarthome
+  fields:
+    schedule_name:
+      description: Schedule id
+      example: Standard
+      required: true
+      selector:
+        text:

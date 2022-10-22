@@ -1,0 +1,11 @@
+{
+  "codeowners": ["@rbiremon"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/rbiremon/hass-comapsmarthome/",
+  "domain": "comapsmarthome",
+  "iot_class": "cloud_polling",
+  "name": "comapsmarthome",
+  "requirements": ["httpx","bidict"],
+  "version": "1.0.0"
+}

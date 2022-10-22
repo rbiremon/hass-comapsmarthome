@@ -1,0 +1,17 @@
+{
+    "config": {
+        "flow_title": "{name}",
+        "step": {
+            "user": {
+                "title": "Connectez votre compte ComapSmartHome.",
+                "data": {
+                    "username": "Login",
+                    "password": "Mot de passe"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Connexion impossible, vérifiez vos identifiants."
+        }
+    }
+}
