@@ -11,10 +11,14 @@ from homeassistant.components.climate import (
     ClimateEntity,
     HVACMode,
     ClimateEntityFeature,
+)
+
+from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
     PRESET_AWAY
 )
+
 from homeassistant.helpers.typing import (
     ConfigType,
     DiscoveryInfoType,

@@ -1,54 +1,65 @@
-from http.client import HTTPException
 import httpx
 from datetime import datetime
 import logging
+from threading import Lock
 
 _LOGGER = logging.getLogger(__name__)
+_TOKEN_LOCK = Lock()
 
 class ComapClient(object):
-    token = ""
     _BASEURL = "https://api.comapsmarthome.com/"
+    login_headers = {}
+    login_payload = {}
+    token = ""
+    last_request = ""
+    token_expires = ""
+    clientid = ""
 
     def __init__(self,username,password,clientid="56jcvrtejpracljtirq7qnob44"):
-        _USERNAME = username
-        _PASSWORD = password
-        _CLIENT_ID = "56jcvrtejpracljtirq7qnob44"
-        _REGION_NAME = "eu-west-3"
-        url = "https://cognito-idp.eu-west-3.amazonaws.com"
-        headers = {
+        self.clientid=clientid
+        self.login_headers = {
             "Content-Type": "application/x-amz-json-1.1",
             "x-amz-target": "AWSCognitoIdentityProviderService.InitiateAuth",
             "origin": "https://app.comapsmarthome.com",
             "referer": "https://app.comapsmarthome.com",
         }
-        payload = {
+        self.login_payload = {
             "AuthFlow": "USER_PASSWORD_AUTH",
             "AuthParameters": {
                 "USERNAME": username,
                 "PASSWORD": password,
             },
-            "ClientId": "56jcvrtejpracljtirq7qnob44",
+            "ClientId": clientid,
         }
-
         try:
-            login_request = httpx.post(url, json=payload, headers=headers)
-            login_request.raise_for_status()
-            response = login_request.json()
-            self.lastRequest = datetime.now()
-            self.token = response.get("AuthenticationResult").get("AccessToken")
-            self.refreshToken = response.get("AuthenticationResult").get("RefreshToken")
-            self.tokenExpires = response.get("AuthenticationResult").get("ExpiresIn")
+            self.login()
             housings = self.get_housings()
             self.housing = housings[0].get("id")
+        except AttributeError as err:
+            raise ComapClientAuthException from err
+
+    
+    def login(self):
+        try:
+            url = "https://cognito-idp.eu-west-3.amazonaws.com"
+            login_request = httpx.post(url, json=self.login_payload, headers=self.login_headers)
+            login_request.raise_for_status()
+            response = login_request.json()
+            self.last_request = datetime.now()
+            self.token = response.get("AuthenticationResult").get("AccessToken")
+            self.refresh_token = response.get("AuthenticationResult").get("RefreshToken")
+            self.token_expires = response.get("AuthenticationResult").get("ExpiresIn")
+
         except httpx.HTTPStatusError as err:
             _LOGGER.error('Could not set up COMAP client - %s status code. Check your credentials',err.response.status_code)
-            raise ComapClientException("Client set up failed",err.response.status_code) from err
+            raise ComapClientAuthException("Client set up failed",err.response.status_code) from err
+
 
     def get_request(self, url, headers=None, params={}):
-        if (datetime.now() - self.lastRequest).total_seconds() > (
-            self.tokenExpires - 60
+        if (datetime.now() - self.last_request).total_seconds() > (
+            self.token_expires - 60
         ):
-            self.refresh_token()
+            self.token_refresh()
         if headers is None:
             headers = {
                 "Authorization": "Bearer {}".format(self.token),
@@ -58,68 +69,60 @@ class ComapClient(object):
         r.raise_for_status()
         return r.json()
 
-    async def async_post(self, url, headers=None, json={}):
-        if (datetime.now() - self.lastRequest).total_seconds() > (
-            self.tokenExpires - 60
+    async def async_request(self, mode, url, headers=None, params={}, json={}):
+        if (datetime.now() - self.last_request).total_seconds() > (
+            self.token_expires - 60
         ):
-            self.refresh_token()
+            _LOGGER.debug("Attempting refresh of access token")
+            self.token_refresh()
         if headers is None:
             headers = {
                 "Authorization": "Bearer {}".format(self.token),
                 "Content-Type": "application/json",
             }
         async with httpx.AsyncClient() as client:
-            r = await client.post(url=url, headers=headers, json=json)
+            if mode == "post":
+                r = await client.post(url=url, headers=headers, json=json)
+            elif mode == "delete":
+                r = await client.delete(url=url, headers=headers)
+            elif mode =="get":
+                r = await client.get(url=url, headers=headers, params=params)
             r.raise_for_status()
-            return r.json()
+            return r.json()      
+
+    async def async_post(self, url, headers=None, json={}):
+        return await self.async_request("post",url,headers,json)
 
     async def async_get(self, url, headers=None, params={}):
-        if (datetime.now() - self.lastRequest).total_seconds() > (
-            self.tokenExpires - 60
-        ):
-            self.refresh_token()
-        if headers is None:
-            headers = {
-                "Authorization": "Bearer {}".format(self.token),
-                "Content-Type": "application/json",
-            }
-        async with httpx.AsyncClient() as client:
-            r = await client.get(url=url, headers=headers, params=params)
-            return r.json()
+        return await self.async_request("get",url,headers,params)
 
     async def async_delete(self, url, headers=None):
-        if (datetime.now() - self.lastRequest).total_seconds() > (
-            self.tokenExpires - 60
-        ):
-            self.refresh_token()
-        if headers is None:
-            headers = {
-                "Authorization": "Bearer {}".format(self.token),
-                "Content-Type": "application/json",
-            }
-        async with httpx.AsyncClient() as client:
-            r = await client.delete(url=url, headers=headers)
-            return r.json()
+        return await self.async_request("delete",url,headers)
 
-    def refresh_token(self):
+    def token_refresh(self):
         url = "https://cognito-idp.eu-west-3.amazonaws.com"
-        headers = {
-            "Content-Type": "application/x-amz-json-1.1",
-            "x-amz-target": "AWSCognitoIdentityProviderService.InitiateAuth",
-            "origin": "https://app.comapsmarthome.com",
-            "referer": "https://app.comapsmarthome.com",
-        }
-        payload = {
-            "AuthFlow": "REFRESH_TOKEN_AUTH",
-            "AuthParameters": {"REFRESH_TOKEN": self.refreshToken},
-            "ClientId": "4s41oamtn4655ft1csnm9tjonb",
-        }
 
-        login_request = httpx.post(url, json=payload, headers=headers)
-        response = login_request.json()
-        self.lastRequest = datetime.now()
-        self.token = response.get("AuthenticationResult").get("AccessToken")
-        self.tokenExpires = response.get("AuthenticationResult").get("ExpiresIn")
+        with _TOKEN_LOCK:
+            headers = {
+                "Content-Type": "application/x-amz-json-1.1",
+                "x-amz-target": "AWSCognitoIdentityProviderService.InitiateAuth",
+                "origin": "https://app.comapsmarthome.com",
+                "referer": "https://app.comapsmarthome.com",
+            }
+            payload = {
+                "AuthFlow": "REFRESH_TOKEN_AUTH",
+                "AuthParameters": {"REFRESH_TOKEN": self.refresh_token},
+                "ClientId": self.clientid,
+            }
+
+            login_request = httpx.post(url, json=payload, headers=headers)
+            if login_request.status_code == 200:
+                response = login_request.json()
+                self.last_request = datetime.now()
+                self.token = response.get("AuthenticationResult").get("AccessToken")
+                self.token_expires = response.get("AuthenticationResult").get("ExpiresIn")
+            else:
+                _LOGGER.error("Refresh token failed")
 
     def get_housings(self):
         return self.get_request(self._BASEURL + "park/housings")
