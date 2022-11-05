@@ -91,10 +91,10 @@ class ComapClient(object):
             return r.json()      
 
     async def async_post(self, url, headers=None, json={}):
-        return await self.async_request("post",url,headers,json)
+        return await self.async_request("post",url,headers,json=json)
 
     async def async_get(self, url, headers=None, params={}):
-        return await self.async_request("get",url,headers,params)
+        return await self.async_request("get",url,headers,params=params)
 
     async def async_delete(self, url, headers=None):
         return await self.async_request("delete",url,headers)

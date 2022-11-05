@@ -90,6 +90,8 @@ async def async_setup_platform(
 
     housing_details = await hass.async_add_executor_job(client.get_zones)
     zones = [ComapZoneThermostat(coordinator, client, zone) for zone in housing_details.get("zones")]
+
+    await coordinator.async_config_entry_first_refresh()
     async_add_entities(zones, update_before_add=True)
 
     platform = entity_platform.async_get_current_platform()
@@ -181,6 +183,8 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator],ClimateEntity):
             self._current_humidity = zone.get("humidity")
             if (self.set_point_type == "custom_temperature"):
                 self._attr_target_temperature = zone.get("set_point").get("instruction")
+            else:
+                self.update_target_temperature(zone.get("set_point").get("instruction"))
 
         if self.set_point_type == "pilot_wire":
             self.zone_type = "pilot_wire"
@@ -279,10 +283,10 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator],ClimateEntity):
         elif self.set_point_type == "defined_temperature":
             try:
                 temperatures = self.coordinator.data["temperatures"]
-                if "instruction" in temperatures:
-                    self._attr_target_temperature = temperatures["instruction"]
-                elif temperatures["connected"]["instruction"]:
-                    self._attr_target_temperature = temperatures["instruction"]
+                if instruction in temperatures:
+                    self._attr_target_temperature = temperatures[instruction]
+                elif instruction in temperatures["connected"]:
+                    self._attr_target_temperature = temperatures["connected"][instruction]
             except:
                 self._attr_target_temperature = 0
 
