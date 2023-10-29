@@ -1,6 +1,8 @@
 # hass-comapsmarthome
 A Home Assistant custom component for comap smart home thermostats (qivivo)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rbiremon&repository=hass-comapsmarthome)
+
 ## Supported features
 This is designed for Qivivo Fil Pilote thermostats.
 

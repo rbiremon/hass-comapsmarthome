@@ -5,6 +5,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.helpers.typing import (
     ConfigType,
@@ -52,6 +53,7 @@ async def async_setup_entry(
     config = hass.data[DOMAIN][config_entry.entry_id]
     await async_setup_platform(hass, config, async_add_entities)
 
+
 async def async_setup_platform(
     hass: HomeAssistantType,
     config: ConfigType,
@@ -59,7 +61,7 @@ async def async_setup_platform(
 ) -> None:
     """Set up the comapsmarthome platform."""
 
-    client = ComapClient(username=config[CONF_USERNAME],password=config[CONF_PASSWORD])
+    client = ComapClient(username=config[CONF_USERNAME], password=config[CONF_PASSWORD])
     housing = [ComapHousingSensor(client)]
     async_add_entities(housing, update_before_add=True)
 
@@ -75,6 +77,7 @@ async def async_setup_platform(
     hass.services.async_register(DOMAIN, SERVICE_SET_HOME, set_home)
 
     return True
+
 
 class ComapHousingSensor(Entity):
     def __init__(self, client):
@@ -109,9 +112,20 @@ class ComapHousingSensor(Entity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return self.attrs
 
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                # Serial numbers are unique identifiers within a specific domain
+                (DOMAIN, self.unique_id)
+            },
+            name=self.name,
+            manufacturer="comap",
+        )
+
     async def async_update(self):
-        housings = await self.hass.async_add_executor_job(
-            self.client.get_housings)
+        housings = await self.hass.async_add_executor_job(self.client.get_housings)
         self._name = housings[0].get("name")
         self.attrs[ATTR_ADDRESS] = housings[0].get("address")
         r = await self.get_schedules()

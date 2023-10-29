@@ -13,10 +13,10 @@ set_schedule:
   target:
     entity:
       integration: comapsmarthome
+      domain: climate
   fields:
     schedule_name:
       description: Schedule id
-      example: Standard
       required: true
       selector:
         text:
