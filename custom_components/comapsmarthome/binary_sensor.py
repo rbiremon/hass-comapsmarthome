@@ -107,7 +107,6 @@ class ComapPresenceSensor(CoordinatorEntity[ComapCoordinator], BinarySensorEntit
                 "last_presence_detected": self.coordinator.data[self.zone_id][
                     "last_presence_detected"
                 ],
-                "last_refresh": datetime.now(),
             }
         )
         self.async_write_ha_state()

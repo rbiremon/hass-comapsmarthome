@@ -2,7 +2,6 @@ import logging
 from bidict import bidict
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -130,6 +129,7 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         PRESET_ECO,
         PRESET_COMFORT,
     ]
+    _attr_hvac_mode: HVACMode | None
 
     def __init__(self, coordinator: ComapCoordinator, client, zone):
         super().__init__(coordinator)
@@ -152,12 +152,13 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
 
         if self.set_point_type == "pilot_wire":
             self.zone_type = "pilot_wire"
-            self._attr_preset_mode = self.map_preset_mode(
+            self._preset_mode = self.map_preset_mode(
                 zone.get("set_point").get("instruction")
             )
             self._attr_supported_features = ClimateEntityFeature.PRESET_MODE
-        self._hvac_mode = self.map_hvac_mode(zone.get("heating_status"))
+        self._hvac_mode: HVACMode = self.map_hvac_mode(zone.get("heating_status"))
         self.attrs: dict[str, Any] = {}
+        self.added = False
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -170,6 +171,10 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
             name=self._name,
             manufacturer="comap",
         )
+
+    @property
+    def should_poll(self) -> bool:
+        return True
 
     @property
     def name(self) -> str:
@@ -195,8 +200,12 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         return self._current_humidity
 
     @property
-    def hvac_mode(self):
+    def hvac_mode(self) -> HVACMode:
         return self._hvac_mode
+
+    @property
+    def preset_mode(self) -> str | None:
+        return self._preset_mode
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -207,6 +216,9 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         """Handle updated data from the coordinator."""
         self.attrs.update(self.coordinator.data[self.zone_id])
         self.async_schedule_update_ha_state(force_refresh=True)
+
+    async def async_added_to_hass(self) -> None:
+        self.added = True
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         await self.client.set_temporary_instruction(
@@ -243,6 +255,12 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
             self.update_target_temperature(
                 zone_data.get("set_point").get("instruction")
             )
+        if self.zone_type == "pilot_wire":
+            self._preset_mode = self.map_preset_mode(
+                zone_data.get("set_point").get("instruction")
+            )
+        if self.added == True:
+            self.async_write_ha_state()
 
     def map_hvac_mode(self, comap_mode):
         hvac_mode_map = {"cooling": HVACMode.OFF, "heating": HVACMode.HEAT}

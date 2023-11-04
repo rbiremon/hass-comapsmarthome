@@ -2,8 +2,8 @@ from datetime import timedelta
 import logging
 from typing import Any
 from bidict import bidict
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.components.switch import (
     SwitchDeviceClass,
