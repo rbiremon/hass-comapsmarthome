@@ -50,8 +50,6 @@ from . import ComapCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(minutes=1)
-
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,
@@ -173,10 +171,6 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         )
 
     @property
-    def should_poll(self) -> bool:
-        return True
-
-    @property
     def name(self) -> str:
         """Return the name of the entity."""
         return self._name
@@ -208,17 +202,30 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         return self._preset_mode
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        return self.attrs
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        keys = [
+            "schedule_id",
+            "open_window",
+            "last_transmission",
+            "next_timeslot",
+            "kids_lock",
+        ]
+        try:
+            return {key: self.attrs[key] for key in keys}
+        except:
+            _LOGGER.warning("Failed to update extra attributes for zone " + self.name)
+            return None
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self.attrs.update(self.coordinator.data[self.zone_id])
+        self.attributes_update(self.coordinator.data[self.zone_id])
         self.async_schedule_update_ha_state(force_refresh=True)
 
     async def async_added_to_hass(self) -> None:
         self.added = True
+        return await super().async_added_to_hass()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         await self.client.set_temporary_instruction(
@@ -247,6 +254,11 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
         zone_data = await self.hass.async_add_executor_job(
             self.client.get_zone, self.zone_id
         )
+        self.attributes_update(zone_data)
+        if self.added == True:
+            self.async_write_ha_state()
+
+    def attributes_update(self, zone_data):
         self._current_temperature = zone_data.get("temperature")
         self._current_humidity = zone_data.get("humidity")
         self._hvac_mode = self.map_hvac_mode(zone_data.get("heating_status"))
@@ -255,12 +267,10 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
             self.update_target_temperature(
                 zone_data.get("set_point").get("instruction")
             )
-        if self.zone_type == "pilot_wire":
+        elif self.zone_type == "pilot_wire":
             self._preset_mode = self.map_preset_mode(
                 zone_data.get("set_point").get("instruction")
             )
-        if self.added == True:
-            self.async_write_ha_state()
 
     def map_hvac_mode(self, comap_mode):
         hvac_mode_map = {"cooling": HVACMode.OFF, "heating": HVACMode.HEAT}
@@ -287,6 +297,10 @@ class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
                     self._attr_target_temperature = temperatures["connected"][
                         instruction
                     ]
+                elif instruction in temperatures["smart"]:
+                    self._attr_target_temperature = temperatures["smart"][instruction]
+                else:
+                    self._attr_target_temperature = 0
             except:
                 self._attr_target_temperature = 0
 
