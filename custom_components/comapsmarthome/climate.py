@@ -29,7 +29,7 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
     CONF_PASSWORD,
-    TEMP_CELSIUS,
+    UnitOfTemperature,
 )
 
 from typing import Optional, Any
@@ -117,7 +117,7 @@ async def async_setup_platform(
 
 class ComapZoneThermostat(CoordinatorEntity[ComapCoordinator], ClimateEntity):
     _attr_target_temperature_step = "0.5"
-    _attr_temperature_unit = TEMP_CELSIUS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
     _attr_preset_modes = [
         "off",
