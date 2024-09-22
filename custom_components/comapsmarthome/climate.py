@@ -1,56 +1,41 @@
 import logging
+from typing import Any
+
 from bidict import bidict
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.components.climate import (
-    ClimateEntity,
-    HVACMode,
-    ClimateEntityFeature,
-)
-from homeassistant.helpers.device_registry import DeviceInfo
-
-from homeassistant.components.climate.const import (
-    PRESET_COMFORT,
-    PRESET_ECO,
-    PRESET_AWAY,
-)
-
-from homeassistant.helpers.typing import (
-    ConfigType,
-    DiscoveryInfoType,
-    HomeAssistantType,
-)
-
-from homeassistant.const import (
-    CONF_SCAN_INTERVAL,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    UnitOfTemperature,
-)
-
-from typing import Optional, Any
-from datetime import timedelta
-from .comap import ComapClient
 import voluptuous as vol
 
-
-from .const import (
-    ATTR_ADDRESS,
-    DOMAIN,
-    ATTR_AVL_SCHDL,
-    SERVICE_SET_SCHEDULE,
-    ATTR_SCHEDULE_NAME,
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode,
 )
+from homeassistant.components.climate.const import (
+    PRESET_AWAY,
+    PRESET_COMFORT,
+    PRESET_ECO,
+)
+from homeassistant.components.sensor import PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+    UnitOfTemperature,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import ComapCoordinator
+from .comap import ComapClient
+from .const import ATTR_SCHEDULE_NAME, DOMAIN, SERVICE_SET_SCHEDULE
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+SENSOR_PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -83,7 +68,6 @@ async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
-    discovery_info: Optional[DiscoveryInfoType] = None,
 ) -> None:
     """Set up the comapsmarthome platform."""
 

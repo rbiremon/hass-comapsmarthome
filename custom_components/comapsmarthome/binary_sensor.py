@@ -1,32 +1,18 @@
+from datetime import datetime, timedelta, timezone
 import logging
-from typing import Any
-from bidict import bidict
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers import config_validation as cv, entity_platform
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
-    BinarySensorEntityDescription,
 )
-from datetime import datetime, timedelta, timezone
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-
-from homeassistant.const import (
-    CONF_USERNAME,
-    CONF_PASSWORD,
-)
-
-from . import ComapCoordinator, ComapClient
-
-from .const import (
-    DOMAIN,
-)
+from . import ComapClient, ComapCoordinator
+from .const import DOMAIN
 
 
 async def async_setup_entry(

@@ -1,42 +1,33 @@
-import logging
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-
-from homeassistant.helpers.typing import (
-    ConfigType,
-    HomeAssistantType,
-)
-
-from homeassistant.const import (
-    CONF_SCAN_INTERVAL,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-)
-
 from datetime import timedelta
-from .comap import ComapClient
+import logging
+from typing import Any, Optional
+
 import voluptuous as vol
-from typing import Optional, Any
 
+from homeassistant.components.sensor import PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType
 
+from .comap import ComapClient
 from .const import (
     ATTR_ADDRESS,
+    ATTR_AVL_SCHDL,
+    DOMAIN,
     SERVICE_SET_AWAY,
     SERVICE_SET_HOME,
-    DOMAIN,
-    ATTR_AVL_SCHDL,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(minutes=1)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+SENSOR_PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -55,7 +46,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
 ) -> None:

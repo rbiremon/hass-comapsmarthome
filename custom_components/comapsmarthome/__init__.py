@@ -1,17 +1,15 @@
-"""ComapSmartHome custom component"""
-import asyncio
-import logging
-from datetime import timedelta
+"""ComapSmartHome custom component."""
 
-import async_timeout
-from jinja2 import TemplateAssertionError
+from asyncio import timeout
+from datetime import timedelta
+import logging
+
 from homeassistant import config_entries, core
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .comap import ComapClientException, ComapClient
 from .const import DOMAIN
-
-from .comap import ComapClient, ComapClientException
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,19 +22,10 @@ async def async_setup_entry(
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
     # Forward the setup to the sensor platform.
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "climate")
-    )
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "sensor")
-    )
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "binary_sensor")
+    await hass.config_entries.async_forward_entry_setups(
+        entry, ["climate", "sensor", "binary_sensor", "switch"]
     )
 
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "switch")
-    )
     return True
 
 
@@ -63,7 +52,7 @@ class ComapCoordinator(DataUpdateCoordinator):
         try:
             # Note: asyncio.TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
-            async with async_timeout.timeout(10):
+            async with timeout(10):
                 zones = await self.client.get_zones()
                 zones_details = dict()
                 for zone in zones["zones"]:

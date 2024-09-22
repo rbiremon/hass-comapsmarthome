@@ -1,28 +1,15 @@
 from datetime import timedelta
 import logging
 from typing import Any
-from bidict import bidict
-from homeassistant.core import HomeAssistant
+
+from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.components.switch import (
-    SwitchDeviceClass,
-    SwitchEntity,
-    SwitchEntityDescription,
-)
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 
-
-from homeassistant.const import (
-    CONF_USERNAME,
-    CONF_PASSWORD,
-)
-
-from . import ComapCoordinator, ComapClient
-
-from .const import (
-    DOMAIN,
-)
+from . import ComapClient, ComapCoordinator
+from .const import DOMAIN
 
 SCAN_INTERVAL = timedelta(minutes=5)
 
@@ -76,7 +63,7 @@ class ComapHousingSensor(SwitchEntity):
 
     async def async_update(self):
         zones = await self.client.get_zones()
-        self._is_on = True if zones["heating_system_state"] == "on" else False
+        self._is_on = zones["heating_system_state"] == "on"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         return await self.client.turn_on()

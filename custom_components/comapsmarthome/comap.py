@@ -256,7 +256,7 @@ class ComapClient(object):
     async def set_temporary_instruction(
         self, zone, instruction, duration=120, housing=None
     ):
-        """Set a temporary instruction for a zone, for a given duration in minutes"""
+        """Set a temporary instruction for a zone, for a given duration in minutes."""
         if housing is None:
             housing = self.housing
         data = {"duration": duration, "set_point": {"instruction": instruction}}
@@ -282,7 +282,7 @@ class ComapClient(object):
                 raise err
 
     async def remove_temporary_instruction(self, zone, housing=None):
-        """Set a temporary instruction for a zone, for a given duration in minutes"""
+        """Set a temporary instruction for a zone, for a given duration in minutes."""
         if housing is None:
             housing = self.housing
 
